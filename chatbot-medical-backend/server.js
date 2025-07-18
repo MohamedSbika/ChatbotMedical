@@ -10,6 +10,7 @@ const jwt = require("jsonwebtoken");
 const User = require("./models/User"); // Assure-toi que le modèle User est bien défini
 const RefreshToken = require("./models/RefreshToken"); // import du modèle refresh token
 const verifyToken = require("./middleware/verifyToken");
+const Conversation = require("./models/Conversation");
 
 const app = express();
 
@@ -176,6 +177,56 @@ app.post("/api/logout", async (req, res) => {
     } catch (error) {
         console.error("Erreur logout:", error.message);
         res.status(500).json({ message: "Erreur serveur lors du logout." });
+    }
+});
+
+const Conversation = require("./models/Conversation");
+
+// 🟢 Créer une nouvelle conversation
+app.post("/api/conversations", verifyToken, async (req, res) => {
+    try {
+        const newConversation = new Conversation({ userId: req.user.id, messages: [] });
+        await newConversation.save();
+        res.status(201).json(newConversation);
+    } catch (error) {
+        console.error("Erreur création conversation :", error.message);
+        res.status(500).json({ message: "Erreur serveur" });
+    }
+});
+
+// 🟡 Ajouter un message à une conversation existante
+app.post("/api/conversations/:id/message", verifyToken, async (req, res) => {
+    try {
+        const conversation = await Conversation.findById(req.params.id);
+        if (!conversation) return res.status(404).json({ message: "Conversation non trouvée." });
+
+        if (conversation.userId.toString() !== req.user.id) {
+            return res.status(403).json({ message: "Accès interdit à cette conversation." });
+        }
+
+        const newMessage = {
+            sender: req.body.sender || "user",
+            text: req.body.text,
+        };
+
+        conversation.messages.push(newMessage);
+        await conversation.save();
+
+        res.status(200).json(conversation);
+    } catch (error) {
+        console.error("Erreur ajout message :", error.message);
+        res.status(500).json({ message: "Erreur serveur" });
+    }
+});
+
+// 🔵 Récupérer toutes les conversations d’un utilisateur
+app.get("/api/conversations", verifyToken, async (req, res) => {
+    try {
+        const conversations = await Conversation.find({ userId: req.user.id }).sort({ createdAt: -1 });
+        res.status(200).json(conversations);
+    } catch (error) {
+        console.error("Erreur récupération conversations :", error.message);
+        res.status(500).json({ message: "Erreur serveur" });
     }
 });
 
