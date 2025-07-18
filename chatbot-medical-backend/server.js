@@ -45,7 +45,7 @@ app.post("/api/faq", async (req, res) => {
 });
 
 // ROUTE QUESTION CHATBOT
-app.post("/api/ask", verifyToken, async (req, res) => {
+app.post("/api/ask", async (req, res) => {
     try {
         const userQuestion = removeAccents(req.body.question?.toLowerCase().trim());
         const faqs = await Faq.find();
