@@ -180,7 +180,6 @@ app.post("/api/logout", async (req, res) => {
     }
 });
 
-const Conversation = require("./models/Conversation");
 
 // 🟢 Créer une nouvelle conversation
 app.post("/api/conversations", verifyToken, async (req, res) => {
