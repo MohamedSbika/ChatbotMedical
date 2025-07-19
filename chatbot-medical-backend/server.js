@@ -196,21 +196,37 @@ app.post("/api/conversations", verifyToken, async (req, res) => {
 // 🟡 Ajouter un message à une conversation existante
 app.post("/api/conversations/:id/message", verifyToken, async (req, res) => {
     try {
+        const { sender, text } = req.body;
+        
+        // Validation des données
+        if (!text || text.trim() === "") {
+            return res.status(400).json({ message: "Le texte du message est requis." });
+        }
+        
+        if (!sender || !["user", "bot"].includes(sender)) {
+            return res.status(400).json({ message: "Le sender doit être 'user' ou 'bot'." });
+        }
+
         const conversation = await Conversation.findById(req.params.id);
-        if (!conversation) return res.status(404).json({ message: "Conversation non trouvée." });
+        if (!conversation) {
+            return res.status(404).json({ message: "Conversation non trouvée." });
+        }
 
         if (conversation.userId.toString() !== req.user.id) {
             return res.status(403).json({ message: "Accès interdit à cette conversation." });
         }
 
         const newMessage = {
-            sender: req.body.sender || "user",
-            text: req.body.text,
+            sender,
+            text: text.trim(),
+            timestamp: new Date()
         };
 
         conversation.messages.push(newMessage);
+        conversation.updatedAt = new Date();
         await conversation.save();
 
+        console.log(`Message ajouté à la conversation ${req.params.id}:`, newMessage);
         res.status(200).json(conversation);
     } catch (error) {
         console.error("Erreur ajout message :", error.message);
@@ -228,6 +244,26 @@ app.get("/api/conversations", verifyToken, async (req, res) => {
         res.status(500).json({ message: "Erreur serveur" });
     }
 });
+
+app.get("/api/conversations/:id", verifyToken, async (req, res) => {
+    try {
+        const conversation = await Conversation.findById(req.params.id);
+
+        if (!conversation) {
+            return res.status(404).json({ message: "Conversation non trouvée." });
+        }
+
+        if (conversation.userId.toString() !== req.user.id) {
+            return res.status(403).json({ message: "Accès interdit à cette conversation." });
+        }
+
+        res.status(200).json(conversation);
+    } catch (error) {
+        console.error("Erreur récupération conversation :", error.message);
+        res.status(500).json({ message: "Erreur serveur" });
+    }
+});
+
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
